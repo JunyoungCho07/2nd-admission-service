@@ -14,7 +14,6 @@ if 'simulation_mode' not in st.session_state:
     st.session_state.simulation_mode = False
 if 'messages' not in st.session_state:
     st.session_state.messages = []
-# (이하 기존 session_state 변수들은 생략)
 if 'life_record' not in st.session_state: st.session_state.life_record = ""
 if 'cover_letter' not in st.session_state: st.session_state.cover_letter = ""
 if 'initial_result' not in st.session_state: st.session_state.initial_result = ""
