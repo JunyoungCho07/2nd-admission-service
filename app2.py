@@ -41,9 +41,8 @@ except (FileNotFoundError, KeyError):
     st.error("API 키를 찾을 수 없습니다. .streamlit/secrets.toml 파일을 확인해주세요.")
     st.stop()
 
-# --- 유틸리티 함수 (변경 없음) ---
+# PDF 텍스트 추출 함수
 def extract_text_from_pdf(pdf_file):
-    # ... (기존 코드와 동일)
     if pdf_file is not None:
         try:
             pdf_reader = PyPDF2.PdfReader(io.BytesIO(pdf_file.read()))
@@ -56,14 +55,41 @@ def extract_text_from_pdf(pdf_file):
             return None
     return None
 
+# 이미지를 Base64로 인코딩하는 함수
 def get_image_base64(path):
-    # ... (기존 코드와 동일)
     try:
         with open(path, "rb") as img_file:
             return base64.b64encode(img_file.read()).decode('utf-8')
     except FileNotFoundError:
         return None
 
+def parse_questions_from_report(text_block: str, start_marker: str) -> str:
+    """
+    주어진 텍스트 블록에서 특정 시작 마커 이후의 모든 텍스트를 추출합니다.
+    
+    Args:
+        text_block (str): AI가 생성한 전체 텍스트 (e.g., st.session_state.initial_result)
+        start_marker (str): 추출을 시작할 기준이 되는 문자열 (e.g., "대표 질문")
+        
+    Returns:
+        str: 추출된 텍스트. 마커를 찾지 못하면 원본 텍스트의 일부나 빈 문자열을 반환할 수 있음.
+    """
+    try:
+        # start_marker를 기준으로 텍스트를 나눕니다.
+        parts = text_block.split(start_marker)
+        
+        # start_marker가 존재한다면, parts 리스트는 2개 이상의 요소를 가집니다.
+        if len(parts) > 1:
+            # 두 번째 부분(parts[1])이 우리가 원하는 내용입니다.
+            # .strip()으로 앞뒤 공백이나 줄바꿈을 제거해줍니다.
+            return parts[1].strip()
+        else:
+            # 마커를 찾지 못한 경우, 그냥 원본 텍스트를 반환하여 오류를 방지합니다.
+            return text_block
+            
+    except Exception:
+        # 만약 예외가 발생하면 원본 텍스트를 그대로 반환
+        return text_block
 # --- 🎈 메인 앱 로직 ---
 
 if st.session_state.simulation_mode:
@@ -131,7 +157,8 @@ else: # 분석 모드 UI
     if image_base64:
         st.markdown(f"""<div style="text-align: center;"><img src="data:image/png;base64,{image_base64}" alt="로고" style="width:180px; margin-bottom: 20px;"></div>""", unsafe_allow_html=True)
     st.markdown("<h1 style='text-align: center;'>압박 면접 전략 분석가</h1>", unsafe_allow_html=True)
-
+    st.markdown("<p style='text-align: center;'>Developed by JunyoungCho</p>", unsafe_allow_html=True)
+    
     if not st.session_state.analysis_complete:
         st.markdown("<p style='text-align: center; font-size: 1.1em;'>당신의 서류를 기반으로 가장 날카로운 예상 질문을 추출하고, 완벽한 방어 논리를 설계합니다.</p>", unsafe_allow_html=True)
         st.divider()
@@ -229,22 +256,47 @@ else: # 분석 모드 UI
             col1, col2, col3 = st.columns(3)
             with col1:
                 if st.button("추가 질문 추출 (20개)", use_container_width=True):
-                    with st.spinner("..."):
+                    with st.spinner("서류의 특정 문장과 단어까지 파고드는 20개의 정밀 타격 질문을 생성중입니다......"):
                         response = model_pro_from_cache.generate_content("On command: '추가질문추출'")
                         st.session_state.additional_questions = response.text
                         st.rerun()
             with col2:
                 if st.button("프리미엄 종합 전략 보고서", use_container_width=True):
-                    with st.spinner("..."):
+                    with st.spinner("합격 시나리오와 4D 전략 분석을 포함한 최종 보고서를 생성중입니다..."):
                         response = model_pro_from_cache.generate_content("On command: '생기부분석'")
                         st.session_state.premium_report = response.text
                         st.rerun()
             with col3:
                 if st.button("전략적 모범 답안 생성", use_container_width=True):
-                    with st.spinner("..."):
+                    with st.spinner("모든 질문과 보고서 내용을 바탕으로 모범 답안을 생성중입니다..."):
                         # ... (모범 답안 생성 로직)
                         all_questions = st.session_state.initial_result + "\n\n" + st.session_state.additional_questions
-                        answer_prompt = f"[분석된 질문 목록]\n{all_questions}\n\n---\n[사용자 명령어]\nOn command: '모범답안생성'"
+                        # 💡 1. 초기 결과에서 '대표 질문' 부분만 파싱합니다.
+                        # "대표 질문" 이라는 키워드가 AI 생성 결과에 따라 조금씩 다를 수 있으니 확인이 필요합니다.
+                        # (예: "대표 질문 5개", "대표 예상 질문" 등)
+                        initial_questions = parse_questions_from_report(
+                            st.session_state.initial_result, 
+                            start_marker="대표 예상 질문" 
+                        )
+
+                        # 💡 2. 파싱된 질문과 추가 질문을 합칩니다.
+                        all_questions = [initial_questions] # 파싱된 결과
+                        if st.session_state.additional_questions:
+                            all_questions.append(st.session_state.additional_questions)
+                        
+                        questions_context = "\n\n---\n\n".join(all_questions)
+
+                        # 💡 3. 훨씬 가벼워진 프롬프트를 구성합니다.
+                        answer_prompt = f"""
+                        [답변해야 할 질문 목록]
+                        {questions_context}
+
+                        ---
+                        [사용자 명령어]
+                        On command: '모범답안생성'
+                        # ... (이하 동일)
+                        """
+
                         response = model_pro_from_cache.generate_content(answer_prompt)
                         st.session_state.model_answers = response.text
                         st.rerun()
