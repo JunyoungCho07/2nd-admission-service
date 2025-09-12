@@ -23,19 +23,21 @@ if 'model_answers' not in st.session_state: st.session_state.model_answers = ""
 if 'simulation_report' not in st.session_state: st.session_state.simulation_report = ""
 
 
-# 프롬프트 로드
+# Secrets에서 프롬프트 로드
 try:
-    prompt_path = Path(__file__).parent / "prompt_auswjq.txt" # 프롬프트 파일 이름 확인
-    AI_PROMPT = prompt_path.read_text(encoding="utf-8")
-except FileNotFoundError:
-    st.error("핵심 프롬프트 파일('prompt_auswjq.txt')을 찾을 수 없습니다.")
+    AI_PROMPT = st.secrets["PROMPT_SECRET"]
+except (FileNotFoundError, KeyError):
+    st.error("프롬프트 내용을 찾을 수 없습니다. .streamlit/secrets.toml 파일을 확인해주세요.")
     st.stop()
 
 # API 키 설정
 try:
     api_key = st.secrets["GOOGLE_API_KEY"]
     genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-2.5-pro')
+    # 상세 분석용 Pro 모델
+    model_pro = genai.GenerativeModel('gemini-2.5-pro')
+    # 실시간 대화용 Flash 모델
+    model_flash = genai.GenerativeModel('gemini-2.5-flash')
 except (FileNotFoundError, KeyError):
     st.error("API 키를 찾을 수 없습니다. .streamlit/secrets.toml 파일을 확인해주세요.")
     st.stop()
@@ -102,7 +104,7 @@ if st.session_state.simulation_mode:
                 사용자가 방금 '{user_input}'이라고 답변했습니다. 이 답변을 분석하고, 설정된 난이도와 피드백 모드에 맞춰 다음 꼬리 질문이나 피드백을 생성해주세요.
                 만약 사용자가 '종료'를 선언했다면, 전체 대화 내용을 바탕으로 [면접 시뮬레이션 최종 리포트]를 생성해주세요.
                 """
-                response = model.generate_content(simulation_prompt)
+                response = model_flash.generate_content(simulation_prompt)
                 ai_response = response.text
                 st.markdown(ai_response)
         
@@ -131,7 +133,7 @@ if st.session_state.simulation_mode:
             """
             try:
                 # 2. AI에 리포트 생성 요청
-                response = model.generate_content(report_prompt)
+                response = model_pro.generate_content(report_prompt)
                 
                 # 3. 결과물을 session_state에 저장
                 st.session_state.simulation_report = response.text
@@ -171,6 +173,7 @@ else:
 
     # 2. 제목 및 설명
     st.markdown("<h1 style='text-align: center;'>압박 면접 전략 분석가</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center;'>Developed by JunyoungCho</p>", unsafe_allow_html=True)
 
     # 초기 분석이 완료되지 않았으면 파일 업로드 화면 표시
     if not st.session_state.analysis_complete:
@@ -199,7 +202,7 @@ else:
                     
                     with st.spinner("AI가 서류를 정밀 분석 중입니다..."):
                         try:
-                            response = model.generate_content(final_prompt)
+                            response = model_pro.generate_content(final_prompt)
                             st.session_state.life_record = life_record_text
                             st.session_state.cover_letter = cover_letter_text
                             st.session_state.initial_result = response.text
@@ -226,14 +229,14 @@ else:
             if st.button("추가 질문 추출 (20개)", use_container_width=True):
                 with st.spinner("서류의 특정 문장과 단어까지 파고드는 20개의 정밀 타격 질문을 생성중입니다..."):
                     additional_prompt = f"{AI_PROMPT}\n\n---\n[사용자 제출 자료]\n\n[생기부 내용]:\n{st.session_state.life_record}\n\n[자소서 내용]:\n{st.session_state.cover_letter}\n\n---\n[사용자 명령어]\nOn command: '추가질문추출'"
-                    response = model.generate_content(additional_prompt)
+                    response = model_pro.generate_content(additional_prompt)
                     st.session_state.additional_questions = response.text
 
         with col2:
             if st.button("프리미엄 종합 전략 보고서", use_container_width=True):
                 with st.spinner("합격 시나리오와 4D 전략 분석을 포함한 최종 보고서를 생성중입니다..."):
                     report_prompt = f"{AI_PROMPT}\n\n---\n[사용자 제출 자료]\n\n[생기부 내용]:\n{st.session_state.life_record}\n\n[자소서 내용]:\n{st.session_state.cover_letter}\n\n---\n[사용자 명령어]\nOn command: '생기부분석'"
-                    response = model.generate_content(report_prompt)
+                    response = model_pro.generate_content(report_prompt)
                     st.session_state.premium_report = response.text
 
         with col3:
@@ -245,7 +248,7 @@ else:
                         # 생성된 모든 질문을 취합
                         all_questions = st.session_state.initial_result + "\n\n" + st.session_state.additional_questions
                         answer_prompt = f"{AI_PROMPT}\n\n---\n[사용자 제출 자료]\n\n[생기부 내용]:\n{st.session_state.life_record}\n\n[자소서 내용]:\n{st.session_state.cover_letter}\n\n---\n[분석된 질문 목록]\n{all_questions}\n\n---\n[사용자 명령어]\nOn command: '모범답안생성'"
-                        response = model.generate_content(answer_prompt)
+                        response = model_pro.generate_content(answer_prompt)
                         st.session_state.model_answers = response.text
         st.divider()
 
@@ -275,7 +278,7 @@ else:
             이제 위의 파라미터에 맞춰 [시작 멘트]와 함께 첫 번째 질문을 생성해주세요.
             """
             with st.spinner("AI 면접관을 준비 중입니다..."):
-                response = model.generate_content(start_prompt)
+                response = model_flash.generate_content(start_prompt)
                 first_question = response.text
             
             # 대화 기록 초기화 및 첫 질문 추가
