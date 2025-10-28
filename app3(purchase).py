@@ -14,14 +14,14 @@ st.session_state.setdefault('simulation_mode', False)
 st.session_state.setdefault('pro_cache_name', None)
 st.session_state.setdefault('flash_cache_name', None)
 st.session_state.setdefault('messages', [])
-st.session_state.setdefault('simulation_transcript', [])
+st.session_state.setdefault('simulation_history', []) # ⬅️ 면접 기록을 저장할 리스트
 st.session_state.setdefault('life_record', "")
 st.session_state.setdefault('cover_letter', "")
 st.session_state.setdefault('initial_result', "")
 st.session_state.setdefault('additional_questions', "")
 st.session_state.setdefault('premium_report', "")
 st.session_state.setdefault('model_answers', "")
-st.session_state.setdefault('simulation_report', "")
+# st.session_state.setdefault('simulation_report', "")
 
 # Secrets에서 프롬프트 로드
 try:
@@ -141,11 +141,25 @@ if st.session_state.simulation_mode:
                 """
                 response = model_pro_from_cache.generate_content(report_prompt)
                 
-                st.session_state.simulation_transcript = st.session_state.messages.copy()
-                st.session_state.simulation_report = response.text
-                st.session_state.simulation_mode = False
-                st.session_state.messages = []
-                st.rerun()
+                report_text = response.text
+                if report_text: # 1. AI가 리포트 생성을 성공하면,
+                    
+                    # 2. 📦 '면접 1회차 패키지' (딕셔너리) 생성
+                    new_simulation_entry = {
+                        'transcript': st.session_state.messages.copy(), # 현재 대화록
+                        'report': report_text                          # 방금 생성된 리포트
+                    }
+                    
+                    # 3. 🗂️ '파일 캐비닛' (리스트)에 패키지 추가 (누적)
+                    st.session_state.simulation_history.append(new_simulation_entry)
+                    
+                    # 4. 상태 초기화
+                    st.session_state.simulation_mode = False
+                    st.session_state.messages = []
+                    st.rerun()
+                
+                else:
+                    st.error("리포트 생성에 실패했습니다. (AI가 빈 값을 반환)")
 
             except Exception as e:
                 st.error(f"리포트 생성 중 오류가 발생했습니다: {e}")
@@ -309,8 +323,6 @@ else: # 분석 모드 UI
 
     # 4. 프리미엄 기능은 'premium_unlocked' == True 일 때만 보임
     if st.session_state.get('premium_unlocked', False):
-        st.info("🔓 프리미엄 기능이 활성화되었습니다.")
-        
         try:
             # 💡 (중요) 올바른 함수와 변수 이름으로 Pro 캐시 불러오기
             pro_cache = genai.caching.CachedContent.get(name=st.session_state.pro_cache_name)
@@ -318,32 +330,55 @@ else: # 분석 모드 UI
 
             col1, col2, col3 = st.columns(3)
             with col1:
-                if st.button("추가 질문 추출 (20개)", use_container_width=True):
+                # 💡 추가 질문이 이미 생성되었는지 확인
+                is_questions_generated = bool(st.session_state.additional_questions)
+                
+                if st.button("추가 질문 추출 (20개)", 
+                             use_container_width=True, 
+                             disabled=is_questions_generated): # ⬅️ 1회용 비활성화
                     with st.spinner("서류의 특정 문장과 단어까지 파고드는 20개의 정밀 타격 질문을 생성중입니다......"):
                         response = model_pro_from_cache.generate_content("On command: '추가질문추출'")
                         st.session_state.additional_questions = response.text
                         st.rerun()
+                if is_questions_generated:
+                    st.caption("ℹ️ 추가 질문이 생성되었습니다.") # ⬅️ 완료 안내
+
             with col2:
-                if st.button("프리미엄 종합 전략 보고서", use_container_width=True):
+                # 💡 프리미엄 보고서가 이미 생성되었는지 확인
+                is_report_generated = bool(st.session_state.premium_report)
+
+                if st.button("프리미엄 종합 전략 보고서", 
+                             use_container_width=True, 
+                             disabled=is_report_generated): # ⬅️ 1회용 비활성화
                     with st.spinner("합격 시나리오와 4D 전략 분석을 포함한 최종 보고서를 생성중입니다..."):
                         response = model_pro_from_cache.generate_content("On command: '생기부분석'")
                         st.session_state.premium_report = response.text
                         st.rerun()
+                if is_report_generated:
+                    st.caption("ℹ️ 보고서가 생성되었습니다.") # ⬅️ 완료 안내
+
             with col3:
-                if st.button("전략적 모범 답안 생성", use_container_width=True):
+                # 💡 '추가 질문'이 생성되었는지 여부를 확인
+                is_additional_questions_ready = bool(st.session_state.additional_questions)
+                
+                if st.button("전략적 모범 답안 생성", 
+                             use_container_width=True, 
+                             disabled=not is_additional_questions_ready): # ⬅️ 조건부 활성화
+                    
                     with st.spinner("모든 질문과 보고서 내용을 바탕으로 모범 답안을 생성중입니다..."):
                         # 💡 1. 초기 결과에서 '대표 질문' 부분만 파싱합니다.
+                        # (주의: PROMPT_SECRET에 고유 마커를 삽입했다면, 아래 start_marker를 해당 마커로 변경해야 합니다.)
                         initial_questions = parse_questions_from_report(
                             st.session_state.initial_result, 
-                            start_marker="대표 예상 질문" 
+                            start_marker="---[대표_예상_질문_시작_마커]---" # ⬅️ "대표 예상 질문" 대신 고유 마커로 변경
                         )
 
                         # 💡 2. 파싱된 질문과 추가 질문을 합칩니다.
-                        all_questions_list = [initial_questions] # 리스트로 시작
+                        all_questions_list = [initial_questions] 
                         if st.session_state.additional_questions:
                             all_questions_list.append(st.session_state.additional_questions)
                         
-                        questions_context = "\n\n---\n\n".join(all_questions_list) # 리스트를 join
+                        questions_context = "\n\n---\n\n".join(all_questions_list) 
 
                         # 💡 3. 프롬프트를 구성합니다.
                         answer_prompt = f"""
@@ -358,6 +393,10 @@ else: # 분석 모드 UI
                         response = model_pro_from_cache.generate_content(answer_prompt)
                         st.session_state.model_answers = response.text
                         st.rerun()
+                        
+                # 💡 비활성화된 버튼에 대한 사용자 안내
+                if not is_additional_questions_ready:
+                    st.caption("ℹ️ '추가 질문 추출'을 먼저 실행해야 모범 답안을 생성할 수 있습니다.")
 
         except Exception as e:
             st.error(f"프리미엄 기능 실행 중 오류가 발생했습니다: {e}")
@@ -410,13 +449,21 @@ else: # 분석 모드 UI
                 with st.expander("🔬 심층 해부 질문 (20개)"):
                     st.markdown(st.session_state.additional_questions)
             if st.session_state.model_answers:
-                with st.expander("💡 전략적 모범 답안 패키지"):
-                    st.markdown(st.session_state.model_answers)
-            if st.session_state.simulation_report:
-                with st.expander("📋 면접 시뮬레이션 최종 리포트", expanded=True):
-                    st.markdown(st.session_state.simulation_report)
-            if st.session_state.simulation_transcript:
-                with st.expander("💬 면접 시뮬레이션 전체 대화 다시보기"):
-                    for message in st.session_state.simulation_transcript:
-                        with st.chat_message(message["role"]):
-                            st.markdown(message["content"])
+                        with st.expander("💡 전략적 모범 답안 패키지"):
+                            st.markdown(st.session_state.model_answers)
+                    
+            # 💡 시뮬레이션 기록을 반복문으로 표시
+            if st.session_state.simulation_history:
+                # 💡 기록을 역순으로 표시 (최신 면접이 위로 오도록)
+                for i, simulation in enumerate(reversed(st.session_state.simulation_history)):
+                    # (reversed()를 사용했으므로, 실제 인덱스는 (전체 길이 - 1 - i) 입니다)
+                    entry_number = len(st.session_state.simulation_history) - i
+                    
+                    # 💡 각 시뮬레이션 결과를 별도의 expander에 표시
+                    with st.expander(f"📋 면접 시뮬레이션 {entry_number} - 최종 리포트", expanded=(i == 0)): # ⬅️ 최신 것만 펼치기
+                        st.markdown(simulation['report'])
+                    
+                    with st.expander(f"💬 면접 시뮬레이션 {entry_number} - 전체 대화 다시보기"):
+                        for message in simulation['transcript']:
+                            with st.chat_message(message["role"]):
+                                st.markdown(message["content"])
