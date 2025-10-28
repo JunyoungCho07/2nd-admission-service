@@ -156,7 +156,7 @@ else: # 분석 모드 UI
     image_base64 = get_image_base64(image_path)
     if image_base64:
         st.markdown(f"""<div style="text-align: center;"><img src="data:image/png;base64,{image_base64}" alt="로고" style="width:180px; margin-bottom: 20px;"></div>""", unsafe_allow_html=True)
-    st.markdown("<h1 style='text-align: center;'>압박 면접 전략 분석가</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center;'>면접관 AI</h1>", unsafe_allow_html=True)
     st.markdown("<p style='text-align: center;'>Developed by JunyoungCho</p>", unsafe_allow_html=True)
     
     if not st.session_state.analysis_complete:
