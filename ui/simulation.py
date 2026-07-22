@@ -92,10 +92,6 @@ def _finish_with_report(settings: Settings) -> None:
         error_box("리포트 생성 중 오류가 발생했습니다. 대화 기록은 보존되어 있으니 다시 시도해주세요.", exc)
         return
 
-    if not report:
-        st.error("리포트 생성에 실패했습니다. (AI가 빈 응답을 반환) 다시 시도해주세요.")
-        return
-
     _archive_and_exit(report)
 
 

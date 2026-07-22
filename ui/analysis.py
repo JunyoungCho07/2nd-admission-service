@@ -1,7 +1,7 @@
 """분석 모드 UI: 업로드 → 초기 분석 → 심층 기능 → 시뮬레이션 시작 → 결과 열람."""
 import streamlit as st
 
-from core.config import Settings
+from core.config import MAX_DOC_CHARS, Settings
 from core.gemini import create_interview_chat, generate_report, get_client
 from core.parsing import parse_questions_from_report
 from core.pdf import extract_text
@@ -85,6 +85,18 @@ def _render_upload(settings: Settings) -> None:
         )
         return
 
+    too_long = []
+    if len(life_record_text) > MAX_DOC_CHARS:
+        too_long.append(f"생활기록부({len(life_record_text):,}자)")
+    if len(cover_letter_text) > MAX_DOC_CHARS:
+        too_long.append(f"자기소개서({len(cover_letter_text):,}자)")
+    if too_long:
+        st.error(
+            f"{' / '.join(too_long)}이(가) 허용 한도({MAX_DOC_CHARS:,}자)를 초과했습니다. "
+            "올바른 서류 PDF인지 확인해주세요. 일반적인 생기부/자소서는 이 한도를 넘지 않습니다."
+        )
+        return
+
     try:
         with st.spinner("AI가 서류를 분석하고 있습니다... (1~2분 정도 걸릴 수 있어요)"):
             client = get_client(settings.api_key)
@@ -139,9 +151,10 @@ def _run_report(client, settings: Settings, state_key: str, command: str, spinne
                 command=command,
                 extra_context=extra_context,
             )
-        st.rerun()
     except Exception as exc:
         error_box("보고서 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.", exc)
+        return
+    st.rerun()
 
 
 def _render_deep_features(client, settings: Settings) -> None:
