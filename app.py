@@ -1,4 +1,4 @@
-"""면접관 AI — 과학고 2차 전형(면접) 대비 서비스 진입점."""
+"""면접관 AI — 입학 면접 대비 서비스 진입점 (기본 대상: KAIST 신입생 선발 면접)."""
 import streamlit as st
 
 from core.config import APP_TITLE, load_settings

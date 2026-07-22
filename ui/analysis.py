@@ -25,7 +25,7 @@ CONSENT_TEXT = (
 
 
 def render_analysis(settings: Settings) -> None:
-    render_header()
+    render_header(settings.target_exam)
     if not st.session_state.analysis_complete:
         _render_upload(settings)
     else:

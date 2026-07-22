@@ -10,6 +10,9 @@ DEFAULT_FLASH_MODEL = "gemini-3.6-flash"
 APP_TITLE = "면접관 AI"
 LOGO_PATH = "JYC_clear.png"
 
+# 대비 대상 전형 표시명 (secrets의 TARGET_EXAM 키로 교체 가능)
+DEFAULT_TARGET_EXAM = "KAIST 신입생 선발 면접"
+
 # 서류 1건당 허용하는 최대 추출 텍스트 길이.
 # 정상 생기부/자소서는 수만 자 수준 — 이 한도는 잘못된 파일(전집 스캔 등)로 인한
 # 과금 폭탄과 gemini-3.1-pro의 200K 토큰 초과 시 2배 요금 구간 진입을 막는다.
@@ -35,6 +38,7 @@ class Settings:
     system_prompt: str
     pro_model: str
     flash_model: str
+    target_exam: str
 
 
 def load_settings() -> Settings:
@@ -56,4 +60,5 @@ def load_settings() -> Settings:
         system_prompt=normalize_prompt(raw_prompt),
         pro_model=st.secrets.get("PRO_MODEL", DEFAULT_PRO_MODEL),
         flash_model=st.secrets.get("FLASH_MODEL", DEFAULT_FLASH_MODEL),
+        target_exam=st.secrets.get("TARGET_EXAM", DEFAULT_TARGET_EXAM),
     )
