@@ -209,3 +209,5 @@ __marimo__/
 #edited
 .streamlit/secrets.toml
 # prompt_auswjq.txt
+# Streamlit secrets (로컬 개발용 — 절대 커밋 금지)
+.streamlit/secrets.toml
