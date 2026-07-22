@@ -5,10 +5,15 @@ import streamlit as st
 
 # 기본 모델 (secrets의 PRO_MODEL / FLASH_MODEL 키로 코드 수정 없이 교체 가능)
 DEFAULT_PRO_MODEL = "gemini-3.1-pro"
-DEFAULT_FLASH_MODEL = "gemini-3.5-flash"
+DEFAULT_FLASH_MODEL = "gemini-3.6-flash"
 
 APP_TITLE = "면접관 AI"
 LOGO_PATH = "JYC_clear.png"
+
+# 서류 1건당 허용하는 최대 추출 텍스트 길이.
+# 정상 생기부/자소서는 수만 자 수준 — 이 한도는 잘못된 파일(전집 스캔 등)로 인한
+# 과금 폭탄과 gemini-3.1-pro의 200K 토큰 초과 시 2배 요금 구간 진입을 막는다.
+MAX_DOC_CHARS = 150_000
 
 # PROMPT_SECRET 안의 레거시 플레이스홀더 — 서류 원문은 프롬프트 치환이 아니라
 # 별도의 사용자 콘텐츠로 전달되므로, 모델이 중괄호 문자열을 그대로 보지 않도록 안내문으로 바꾼다.
