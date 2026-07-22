@@ -4,9 +4,8 @@ from dataclasses import dataclass
 import streamlit as st
 
 # 기본 모델 (secrets의 PRO_MODEL / FLASH_MODEL 키로 코드 수정 없이 교체 가능)
-# 주의: gemini-2.5 계열은 2026-10-16 은퇴 예정으로 공지됨 — README의 '모델 교체' 참고
-DEFAULT_PRO_MODEL = "gemini-2.5-pro"
-DEFAULT_FLASH_MODEL = "gemini-2.5-flash"
+DEFAULT_PRO_MODEL = "gemini-3.1-pro"
+DEFAULT_FLASH_MODEL = "gemini-3.5-flash"
 
 APP_TITLE = "면접관 AI"
 LOGO_PATH = "JYC_clear.png"

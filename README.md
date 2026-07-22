@@ -30,8 +30,8 @@ PROMPT_SECRET = """
 """
 
 # 선택: 모델 교체 (미지정 시 아래 기본값)
-# PRO_MODEL = "gemini-2.5-pro"
-# FLASH_MODEL = "gemini-2.5-flash"
+# PRO_MODEL = "gemini-3.1-pro"
+# FLASH_MODEL = "gemini-3.5-flash"
 ```
 
 참고:
@@ -46,9 +46,13 @@ PROMPT_SECRET = """
 
 모델명은 코드 수정 없이 secrets의 `PRO_MODEL` / `FLASH_MODEL` 키로 바꿀 수 있습니다.
 
-> ⚠️ 기본값인 gemini-2.5 계열은 **2026-10-16 은퇴 예정**으로 공지되어 있고,
-> 2026년 7월부터 일부 프로젝트에서 조기 404가 보고되고 있습니다. 최신 라인업은
-> [모델 문서](https://ai.google.dev/gemini-api/docs/models)에서 확인 후 교체하세요.
+기본값(2026-07 기준 안정 버전):
+- `gemini-3.1-pro` — 2026-02-19 GA
+- `gemini-3.5-flash` — GA (`gemini-flash-latest`가 가리키는 모델)
+
+> 참고: 더 최신 Flash가 필요하면 `gemini-3.6-flash`(2026-07-21 GA)로 교체할 수
+> 있습니다. 새 모델 출시/은퇴 일정은
+> [모델 문서](https://ai.google.dev/gemini-api/docs/models)에서 확인하세요.
 
 ## 구조
 
