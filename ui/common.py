@@ -14,7 +14,7 @@ def _image_base64(path: str) -> str | None:
         return None
 
 
-def render_header() -> None:
+def render_header(target_exam: str | None = None) -> None:
     logo = _image_base64(LOGO_PATH)
     if logo:
         st.markdown(
@@ -24,6 +24,11 @@ def render_header() -> None:
             unsafe_allow_html=True,
         )
     st.markdown(f"<h1 style='text-align: center;'>{APP_TITLE}</h1>", unsafe_allow_html=True)
+    if target_exam:
+        st.markdown(
+            f"<p style='text-align: center; font-weight: 600;'>🎯 {target_exam} 대비</p>",
+            unsafe_allow_html=True,
+        )
     st.markdown("<p style='text-align: center;'>Developed by JunyoungCho</p>", unsafe_allow_html=True)
 
 
